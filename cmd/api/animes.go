@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -11,10 +10,9 @@ import (
 func (a *application) createAnimeHandler(w http.ResponseWriter, r *http.Request) {
 	var input data.Anime
 
-	// perform the decoding
-	err := json.NewDecoder(r.Body).Decode(&input)
+	err := a.readJSON(w, r, &input)
 	if err != nil {
-		a.errorResponseJSON(w, r, http.StatusBadRequest, err.Error())
+		a.badRequestResponse(w, r, err)
 		return
 	}
 
