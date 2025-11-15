@@ -38,7 +38,7 @@ type AnimeModel struct {
 	DB *sql.DB
 }
 
-func (m AnimeModel) Insert(anime *Anime) error {
+func (m AnimeModel) InsertAnime(anime *Anime) error {
 	query := `
 		INSERT INTO anime (id, title, synopsis, cover_image_url, total_episodes, status, release_date, rating, score, genres, studios, broadcast_information)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -75,7 +75,7 @@ func (m AnimeModel) Insert(anime *Anime) error {
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&anime.JikanLastSyncedAt)
 }
 
-func (m AnimeModel) Get(id int64) (*Anime, error) {
+func (m AnimeModel) GetAnime(id int64) (*Anime, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
@@ -125,4 +125,42 @@ func (m AnimeModel) Get(id int64) (*Anime, error) {
 	}
 
 	return &anime, nil
+}
+
+func (m AnimeModel) UpdateAnime(anime *Anime) error {
+	query := `
+		UPDATE anime
+		SET title = $1, synopsis = $2, cover_image_url = $3, total_episodes = $4, status = $5, release_date = $6, rating = $7, score = $8, genres = $9, studios = $10, broadcast_information = $11
+		WHERE id = $12
+		RETURNING jikan_last_synced_at`
+
+	genresJSON, err := json.Marshal(anime.Genres)
+	if err != nil {
+		return err
+	}
+
+	studiosJSON, err := json.Marshal(anime.Studios)
+	if err != nil {
+		return err
+	}
+
+	args := []any{
+		anime.Title,
+		anime.Synopsis,
+		anime.CoverImageURL,
+		anime.TotalEpisodes,
+		anime.Status,
+		anime.ReleaseDate,
+		anime.Rating,
+		anime.Score,
+		genresJSON,
+		studiosJSON,
+		anime.BroadcastInformation,
+		anime.ID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&anime.JikanLastSyncedAt)
 }

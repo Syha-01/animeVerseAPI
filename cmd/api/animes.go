@@ -60,7 +60,7 @@ func (a *application) createAnimeHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = a.models.Animes.Insert(anime)
+	err = a.models.Animes.InsertAnime(anime)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 		return
@@ -82,7 +82,7 @@ func (a *application) displayAnimeHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	anime, err := a.models.Animes.Get(id)
+	anime, err := a.models.Animes.GetAnime(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
@@ -90,6 +90,102 @@ func (a *application) displayAnimeHandler(w http.ResponseWriter, r *http.Request
 		default:
 			a.serverErrorResponse(w, r, err)
 		}
+		return
+	}
+
+	err = a.writeJSON(w, http.StatusOK, envelope{"anime": anime}, nil)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+	}
+}
+
+func (a *application) updateAnimeHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := a.readIDParam(r)
+	if err != nil {
+		a.notFoundResponse(w, r)
+		return
+	}
+
+	anime, err := a.models.Animes.GetAnime(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			a.notFoundResponse(w, r)
+		default:
+			a.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	var input struct {
+		Title                *string  `json:"title"`
+		Synopsis             *string  `json:"synopsis"`
+		CoverImageURL        *string  `json:"cover_image_url"`
+		TotalEpisodes        *int32   `json:"total_episodes"`
+		Status               *string  `json:"status"`
+		ReleaseDate          *string  `json:"release_date"`
+		Rating               *string  `json:"rating"`
+		Score                *float32 `json:"score"`
+		Genres               []string `json:"genres"`
+		Studios              []string `json:"studios"`
+		BroadcastInformation *string  `json:"broadcast_information"`
+	}
+
+	err = a.readJSON(w, r, &input)
+	if err != nil {
+		a.badRequestResponse(w, r, err)
+		return
+	}
+
+	if input.Title != nil {
+		anime.Title = *input.Title
+	}
+	if input.Synopsis != nil {
+		anime.Synopsis = *input.Synopsis
+	}
+	if input.CoverImageURL != nil {
+		anime.CoverImageURL = *input.CoverImageURL
+	}
+	if input.TotalEpisodes != nil {
+		anime.TotalEpisodes = *input.TotalEpisodes
+	}
+	if input.Status != nil {
+		anime.Status = *input.Status
+	}
+	if input.ReleaseDate != nil {
+		releaseDate, err := time.Parse("2006-01-02", *input.ReleaseDate)
+		if err != nil {
+			a.badRequestResponse(w, r, err)
+			return
+		}
+		anime.ReleaseDate = releaseDate
+	}
+	if input.Rating != nil {
+		anime.Rating = *input.Rating
+	}
+	if input.Score != nil {
+		anime.Score = *input.Score
+	}
+	if input.Genres != nil {
+		anime.Genres = input.Genres
+	}
+	if input.Studios != nil {
+		anime.Studios = input.Studios
+	}
+	if input.BroadcastInformation != nil {
+		anime.BroadcastInformation = *input.BroadcastInformation
+	}
+
+	v := validator.New()
+
+	if data.ValidateAnime(v, anime); !v.IsEmpty() {
+		a.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	err = a.models.Animes.UpdateAnime(anime)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
 		return
 	}
 
