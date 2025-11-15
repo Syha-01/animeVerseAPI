@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -69,6 +70,30 @@ func (a *application) createAnimeHandler(w http.ResponseWriter, r *http.Request)
 	headers.Set("Location", fmt.Sprintf("/v1/animes/%d", anime.ID))
 
 	err = a.writeJSON(w, http.StatusCreated, envelope{"anime": anime}, headers)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+	}
+}
+
+func (a *application) displayAnimeHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := a.readIDParam(r)
+	if err != nil {
+		a.notFoundResponse(w, r)
+		return
+	}
+
+	anime, err := a.models.Animes.Get(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			a.notFoundResponse(w, r)
+		default:
+			a.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = a.writeJSON(w, http.StatusOK, envelope{"anime": anime}, nil)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 	}

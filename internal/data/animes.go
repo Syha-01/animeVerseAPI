@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/Syha-01/animeVerseAPI/internal/validator"
@@ -72,4 +73,56 @@ func (m AnimeModel) Insert(anime *Anime) error {
 	defer cancel()
 
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&anime.JikanLastSyncedAt)
+}
+
+func (m AnimeModel) Get(id int64) (*Anime, error) {
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+
+	query := `
+		SELECT id, title, synopsis, cover_image_url, total_episodes, status, release_date, rating, score, genres, studios, broadcast_information, jikan_last_synced_at
+		FROM anime
+		WHERE id = $1`
+
+	var anime Anime
+	var genres, studios []byte
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+		&anime.ID,
+		&anime.Title,
+		&anime.Synopsis,
+		&anime.CoverImageURL,
+		&anime.TotalEpisodes,
+		&anime.Status,
+		&anime.ReleaseDate,
+		&anime.Rating,
+		&anime.Score,
+		&genres,
+		&studios,
+		&anime.BroadcastInformation,
+		&anime.JikanLastSyncedAt,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	if err := json.Unmarshal(genres, &anime.Genres); err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(studios, &anime.Studios); err != nil {
+		return nil, err
+	}
+
+	return &anime, nil
 }

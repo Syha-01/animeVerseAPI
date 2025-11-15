@@ -60,6 +60,12 @@ BODY='{
 
 curl -i -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/animes
 
+// Get an anime by ID
+curl -i localhost:4000/v1/animes/2
+
+// Get a non-existent anime
+curl -i localhost:4000/v1/animes/999
+
 
 //-------------------------------- Validation -------------------------------------------//
 
