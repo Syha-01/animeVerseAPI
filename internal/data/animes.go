@@ -2,6 +2,8 @@ package data
 
 import (
 	"time"
+
+	"github.com/Syha-01/animeVerseAPI/internal/validator"
 )
 
 type Anime struct {
@@ -18,4 +20,12 @@ type Anime struct {
 	Studios              []string  `json:"studios,omitempty"`
 	BroadcastInformation string    `json:"broadcast_information,omitempty"`
 	JikanLastSyncedAt    time.Time `json:"-"`
+}
+
+func ValidateAnime(v *validator.Validator, anime *Anime) {
+	v.Check(anime.Title != "", "title", "must be provided")
+	v.Check(len(anime.Title) <= 500, "title", "must not be more than 500 bytes long")
+	v.Check(anime.TotalEpisodes >= 0, "total_episodes", "must be a positive integer")
+	v.Check(anime.Score >= 0, "score", "must be a positive number")
+	v.Check(anime.Score <= 10, "score", "must not be greater than 10")
 }

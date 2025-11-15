@@ -36,3 +36,17 @@ BODY='{
 }'
 
 curl -i -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/animes
+
+//-------------------------------- Validation -------------------------------------------//
+
+test for empty title
+
+curl -X POST -H "Content-Type: application/json" -d '{"title": ""}' localhost:4000/v1/animes
+
+
+test for invalid episode count
+
+curl -X POST -H "Content-Type: application/json" -d '{"title": "Test Anime", "total_episodes": -1}' localhost:4000/v1/animes
+
+test for invalid score
+curl -X POST -H "Content-Type: application/json" -d '{"title": "Test Anime", "score": 11}' localhost:4000/v1/animes
