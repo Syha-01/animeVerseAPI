@@ -123,6 +123,51 @@ curl -X DELETE localhost:4000/v1/animes/2
 // Get all animes
 curl -i localhost:4000/v1/animes
 
+//-------------------------------- Sorting -------------------------------------------//
+
+//-------------------------------- Filtering and Searching Animes -------------------------------------------//
+
+// The `GET /v1/animes` endpoint now supports filtering via URL query string parameters.
+// This allows you to search for animes by title and/or genres.
+
+// -- Available Parameters --
+//
+// title (string):
+//   Performs a case-insensitive, partial-word search on the anime's title.
+//   Example: `?title=titan` will match "Attack on Titan".
+//
+// genres (comma-separated string):
+//   Filters for animes that contain ALL of the specified genres. The search is case-sensitive.
+//   Example: `?genres=Action,Drama` will match animes that have BOTH "Action" and "Drama" in their genres list.
+
+// -- Examples --
+
+// Get all animes (no filters)
+// This is the base request. It returns all animes in the database.
+curl -i "localhost:4000/v1/animes"
+
+// Search for animes with 'titan' in the title
+// This uses the `title` parameter to perform a full-text search.
+curl -i "localhost:4000/v1/animes?title=titan"
+
+// Get all animes that have both the 'Action' AND 'Drama' genres
+// This uses the `genres` parameter with a comma-separated list.
+// The database will look for records where the genres array contains both values.
+curl -i "localhost:4000/v1/animes?genres=Action,Drama"
+
+// Get animes with 'note' in the title that also have the 'Thriller' genre
+// This shows how to combine multiple parameters. The filters are joined with an AND condition.
+// Note the use of the '&' to separate different query parameters.
+curl -i "localhost:4000/v1/animes?title=note&genres=Thriller"
+
+//-------------------------------- Pagination -------------------------------------------//
+
+curl -i "localhost:4000/v1/animes?page=1&page_size=2"
+
+curl -i "localhost:4000/v1/animes?page=2&page_size=2"
+
+
+
 //-------------------------------- Validation -------------------------------------------//
 
 test for empty title

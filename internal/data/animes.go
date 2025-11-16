@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/Syha-01/animeVerseAPI/internal/validator"
@@ -195,53 +194,31 @@ func (m AnimeModel) DeleteAnime(id int64) error {
 	return nil
 }
 
-// GetAllAnimes returns a slice of animes, filtered by title and genres.
-func (m AnimeModel) GetAllAnimes(title string, genres []string) ([]*Anime, error) {
-	// Start with the base query. The `WHERE 1=1` is a useful trick to make it easy
-	// to append additional `AND` clauses dynamically.
+func (m AnimeModel) GetAllAnimes(title string, genres []string, filters Filters) ([]*Anime, Metadata, error) {
+	// Use a window function to get the total count.
 	query := `
-		SELECT id, title, synopsis, cover_image_url, total_episodes, status, release_date, rating, score, genres, studios, broadcast_information, jikan_last_synced_at
+		SELECT COUNT(*) OVER(), id, title, synopsis, cover_image_url, total_episodes, status, release_date, rating, score, genres, studios, broadcast_information, jikan_last_synced_at
 		FROM anime
-		WHERE 1=1`
-
-	// Create a slice to hold the query arguments.
-	args := []any{}
-	argCount := 1
-
-	// If a title is provided, add a full-text search clause.
-	// We use PostgreSQL's full-text search operators `to_tsvector` and `plainto_tsquery`.
-	if title != "" {
-		query += fmt.Sprintf(" AND (to_tsvector('simple', title) @@ plainto_tsquery('simple', $%d))", argCount)
-		args = append(args, title)
-		argCount++
-	}
-
-	// If genres are provided, add a clause to check if the `genres` jsonb array
-	// contains all the provided genres. The `@>` operator means "contains".
-	if len(genres) > 0 {
-		genresJSON, err := json.Marshal(genres)
-		if err != nil {
-			return nil, err
-		}
-		query += fmt.Sprintf(" AND (genres @> $%d)", argCount)
-		args = append(args, genresJSON)
-		argCount++
-	}
-
-	// Always order by id for consistent results.
-	query += " ORDER BY id"
+		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (genres @> $2 OR $2 = '[]')
+		ORDER BY id
+		LIMIT $3 OFFSET $4`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Pass the dynamically built query and arguments to QueryContext.
-	rows, err := m.DB.QueryContext(ctx, query, args...)
+	genresJSON, err := json.Marshal(genres)
 	if err != nil {
-		return nil, err
+		return nil, Metadata{}, err
+	}
+
+	rows, err := m.DB.QueryContext(ctx, query, title, genresJSON, filters.limit(), filters.offset())
+	if err != nil {
+		return nil, Metadata{}, err
 	}
 	defer rows.Close()
 
-	// The rest of the scanning logic remains the same.
+	totalRecords := 0
 	animes := []*Anime{}
 
 	for rows.Next() {
@@ -254,9 +231,11 @@ func (m AnimeModel) GetAllAnimes(title string, genres []string) ([]*Anime, error
 		var rating sql.NullString
 		var score sql.NullFloat64
 		var broadcastInformation sql.NullString
-		var genresBytes, studiosBytes []byte // Renamed to avoid shadowing
+		var genresBytes, studiosBytes []byte
 
+		// CORRECTED SCAN: Added &totalRecords at the beginning
 		err := rows.Scan(
+			&totalRecords,
 			&anime.ID,
 			&anime.Title,
 			&synopsis,
@@ -272,7 +251,7 @@ func (m AnimeModel) GetAllAnimes(title string, genres []string) ([]*Anime, error
 			&anime.JikanLastSyncedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 
 		if synopsis.Valid {
@@ -299,20 +278,22 @@ func (m AnimeModel) GetAllAnimes(title string, genres []string) ([]*Anime, error
 		if broadcastInformation.Valid {
 			anime.BroadcastInformation = broadcastInformation.String
 		}
-
 		if err := json.Unmarshal(genresBytes, &anime.Genres); err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 		if err := json.Unmarshal(studiosBytes, &anime.Studios); err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 
 		animes = append(animes, &anime)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 
-	return animes, nil
+	// Calculate metadata.
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+
+	return animes, metadata, nil
 }

@@ -220,27 +220,38 @@ func (a *application) deleteAnimeHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (a *application) listAnimesHandler(w http.ResponseWriter, r *http.Request) {
-	// Create a struct to hold the query string parameters.
 	var input struct {
 		Title  string
 		Genres []string
+		data.Filters
 	}
 
-	// Get the query parameters from the URL.
+	v := validator.New()
 	queryParameters := r.URL.Query()
 
-	// Use our new helpers to read the query values.
 	input.Title = a.getSingleQueryParameter(queryParameters, "title", "")
 	input.Genres = a.getMultipleQueryParameters(queryParameters, "genres", []string{})
+	input.Filters.Page = a.getSingleIntegerParameter(queryParameters, "page", 1, v)
+	input.Filters.PageSize = a.getSingleIntegerParameter(queryParameters, "page_size", 20, v)
 
-	// Pass the filters to the GetAllAnimes() method.
-	animes, err := a.models.Animes.GetAllAnimes(input.Title, input.Genres)
+	data.ValidateFilters(v, input.Filters)
+	if !v.IsEmpty() {
+		a.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// Update the call to receive the metadata.
+	animes, metadata, err := a.models.Animes.GetAllAnimes(input.Title, input.Genres, input.Filters)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 		return
 	}
 
-	err = a.writeJSON(w, http.StatusOK, envelope{"animes": animes}, nil)
+	// Include metadata in the response envelope.
+	err = a.writeJSON(w, http.StatusOK, envelope{
+		"animes":    animes,
+		"@metadata": metadata,
+	}, nil)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 	}
