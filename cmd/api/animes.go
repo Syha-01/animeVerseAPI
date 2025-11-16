@@ -194,3 +194,27 @@ func (a *application) updateAnimeHandler(w http.ResponseWriter, r *http.Request)
 		a.serverErrorResponse(w, r, err)
 	}
 }
+
+func (a *application) deleteAnimeHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := a.readIDParam(r)
+	if err != nil {
+		a.notFoundResponse(w, r)
+		return
+	}
+
+	err = a.models.Animes.DeleteAnime(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			a.notFoundResponse(w, r)
+		default:
+			a.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = a.writeJSON(w, http.StatusOK, envelope{"message": "anime successfully deleted"}, nil)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+	}
+}
