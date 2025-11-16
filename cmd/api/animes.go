@@ -218,3 +218,16 @@ func (a *application) deleteAnimeHandler(w http.ResponseWriter, r *http.Request)
 		a.serverErrorResponse(w, r, err)
 	}
 }
+
+func (a *application) listAnimesHandler(w http.ResponseWriter, r *http.Request) {
+	animes, err := a.models.Animes.GetAllAnimes()
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = a.writeJSON(w, http.StatusOK, envelope{"animes": animes}, nil)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+	}
+}

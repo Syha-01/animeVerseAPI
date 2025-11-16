@@ -60,6 +60,57 @@ BODY='{
 
 curl -i -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/animes
 
+BODY='{
+    "id": 16498,
+    "title": "Attack on Titan",
+    "synopsis": "Centuries ago, mankind was slaughtered to near extinction by monstrous humanoid creatures called Titans, forcing humans to hide in fear behind enormous concentric walls. What makes these giants truly terrifying is that their taste for human flesh is not born out of hunger but what appears to be out of pleasure.",
+    "cover_image_url": "https://cdn.myanimelist.net/images/anime/10/47347.jpg",
+    "total_episodes": 87,
+    "status": "Finished Airing",
+    "release_date": "2013-04-07",
+    "rating": "R - 17+ (violence & profanity)",
+    "score": 8.53,
+    "genres": ["Action", "Military", "Mystery", "Super Power", "Drama", "Fantasy"],
+    "studios": ["Wit Studio", "MAPPA"],
+    "broadcast_information": "Sundays at 00:10 (JST)"
+}'
+
+curl -i -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/animes
+
+BODY='{
+    "id": 1535,
+    "title": "Death Note",
+    "synopsis": "A shinigami, as a god of death, can kill any person—provided they see their victim''s face and write their victim''s name in a notebook called a Death Note. One day, Ryuk, bored by the shinigami lifestyle and interested in seeing how a human would use a Death Note, drops one into the human realm.",
+    "cover_image_url": "https://cdn.myanimelist.net/images/anime/9/9453.jpg",
+    "total_episodes": 37,
+    "status": "Finished Airing",
+    "release_date": "2006-10-04",
+    "rating": "R - 17+ (violence & profanity)",
+    "score": 8.62,
+    "genres": ["Mystery", "Police", "Psychological", "Supernatural", "Thriller"],
+    "studios": ["Madhouse"],
+    "broadcast_information": "Wednesdays at 00:56 (JST)"
+}'
+
+curl -i -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/animes
+
+BODY='{
+    "id": 5114,
+    "title": "Fullmetal Alchemist: Brotherhood",
+    "synopsis": "After a horrific alchemy experiment goes wrong in the Elric household, brothers Edward and Alphonse are left in a catastrophic new reality. Ignoring the alchemical principle banning human transmutation, the boys attempted to bring their deceased mother back to life.",
+    "cover_image_url": "https://cdn.myanimelist.net/images/anime/1223/96541.jpg",
+    "total_episodes": 64,
+    "status": "Finished Airing",
+    "release_date": "2009-04-05",
+    "rating": "R - 17+ (violence & profanity)",
+    "score": 9.14,
+    "genres": ["Action", "Military", "Adventure", "Comedy", "Drama", "Magic", "Fantasy"],
+    "studios": ["Bones"],
+    "broadcast_information": "Sundays at 17:00 (JST)"
+}'
+
+curl -i -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/animes
+
 // Get an anime by ID
 curl -i localhost:4000/v1/animes/2
 
@@ -68,6 +119,9 @@ curl -i localhost:4000/v1/animes/999
 
 //delet and anime with specific ID
 curl -X DELETE localhost:4000/v1/animes/2
+
+// Get all animes
+curl -i localhost:4000/v1/animes
 
 //-------------------------------- Validation -------------------------------------------//
 

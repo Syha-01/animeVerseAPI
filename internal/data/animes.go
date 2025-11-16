@@ -193,3 +193,61 @@ func (m AnimeModel) DeleteAnime(id int64) error {
 
 	return nil
 }
+
+func (m AnimeModel) GetAllAnimes() ([]*Anime, error) {
+	query := `
+		SELECT id, title, synopsis, cover_image_url, total_episodes, status, release_date, rating, score, genres, studios, broadcast_information, jikan_last_synced_at
+		FROM anime
+		ORDER BY id`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	animes := []*Anime{}
+
+	for rows.Next() {
+		var anime Anime
+		var genres, studios []byte
+
+		err := rows.Scan(
+			&anime.ID,
+			&anime.Title,
+			&anime.Synopsis,
+			&anime.CoverImageURL,
+			&anime.TotalEpisodes,
+			&anime.Status,
+			&anime.ReleaseDate,
+			&anime.Rating,
+			&anime.Score,
+			&genres,
+			&studios,
+			&anime.BroadcastInformation,
+			&anime.JikanLastSyncedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(genres, &anime.Genres); err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(studios, &anime.Studios); err != nil {
+			return nil, err
+		}
+
+		animes = append(animes, &anime)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return animes, nil
+}
