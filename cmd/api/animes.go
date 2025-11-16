@@ -220,7 +220,21 @@ func (a *application) deleteAnimeHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (a *application) listAnimesHandler(w http.ResponseWriter, r *http.Request) {
-	animes, err := a.models.Animes.GetAllAnimes()
+	// Create a struct to hold the query string parameters.
+	var input struct {
+		Title  string
+		Genres []string
+	}
+
+	// Get the query parameters from the URL.
+	queryParameters := r.URL.Query()
+
+	// Use our new helpers to read the query values.
+	input.Title = a.getSingleQueryParameter(queryParameters, "title", "")
+	input.Genres = a.getMultipleQueryParameters(queryParameters, "genres", []string{})
+
+	// Pass the filters to the GetAllAnimes() method.
+	animes, err := a.models.Animes.GetAllAnimes(input.Title, input.Genres)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 		return

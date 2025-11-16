@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Syha-01/animeVerseAPI/internal/validator"
@@ -194,51 +195,115 @@ func (m AnimeModel) DeleteAnime(id int64) error {
 	return nil
 }
 
-func (m AnimeModel) GetAllAnimes() ([]*Anime, error) {
+// GetAllAnimes returns a slice of animes, filtered by title and genres.
+func (m AnimeModel) GetAllAnimes(title string, genres []string) ([]*Anime, error) {
+	// Start with the base query. The `WHERE 1=1` is a useful trick to make it easy
+	// to append additional `AND` clauses dynamically.
 	query := `
 		SELECT id, title, synopsis, cover_image_url, total_episodes, status, release_date, rating, score, genres, studios, broadcast_information, jikan_last_synced_at
 		FROM anime
-		ORDER BY id`
+		WHERE 1=1`
+
+	// Create a slice to hold the query arguments.
+	args := []any{}
+	argCount := 1
+
+	// If a title is provided, add a full-text search clause.
+	// We use PostgreSQL's full-text search operators `to_tsvector` and `plainto_tsquery`.
+	if title != "" {
+		query += fmt.Sprintf(" AND (to_tsvector('simple', title) @@ plainto_tsquery('simple', $%d))", argCount)
+		args = append(args, title)
+		argCount++
+	}
+
+	// If genres are provided, add a clause to check if the `genres` jsonb array
+	// contains all the provided genres. The `@>` operator means "contains".
+	if len(genres) > 0 {
+		genresJSON, err := json.Marshal(genres)
+		if err != nil {
+			return nil, err
+		}
+		query += fmt.Sprintf(" AND (genres @> $%d)", argCount)
+		args = append(args, genresJSON)
+		argCount++
+	}
+
+	// Always order by id for consistent results.
+	query += " ORDER BY id"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := m.DB.QueryContext(ctx, query)
+	// Pass the dynamically built query and arguments to QueryContext.
+	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	// The rest of the scanning logic remains the same.
 	animes := []*Anime{}
 
 	for rows.Next() {
 		var anime Anime
-		var genres, studios []byte
+		var synopsis sql.NullString
+		var coverImageURL sql.NullString
+		var totalEpisodes sql.NullInt32
+		var status sql.NullString
+		var releaseDate sql.NullTime
+		var rating sql.NullString
+		var score sql.NullFloat64
+		var broadcastInformation sql.NullString
+		var genresBytes, studiosBytes []byte // Renamed to avoid shadowing
 
 		err := rows.Scan(
 			&anime.ID,
 			&anime.Title,
-			&anime.Synopsis,
-			&anime.CoverImageURL,
-			&anime.TotalEpisodes,
-			&anime.Status,
-			&anime.ReleaseDate,
-			&anime.Rating,
-			&anime.Score,
-			&genres,
-			&studios,
-			&anime.BroadcastInformation,
+			&synopsis,
+			&coverImageURL,
+			&totalEpisodes,
+			&status,
+			&releaseDate,
+			&rating,
+			&score,
+			&genresBytes,
+			&studiosBytes,
+			&broadcastInformation,
 			&anime.JikanLastSyncedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		if err := json.Unmarshal(genres, &anime.Genres); err != nil {
-			return nil, err
+		if synopsis.Valid {
+			anime.Synopsis = synopsis.String
+		}
+		if coverImageURL.Valid {
+			anime.CoverImageURL = coverImageURL.String
+		}
+		if totalEpisodes.Valid {
+			anime.TotalEpisodes = totalEpisodes.Int32
+		}
+		if status.Valid {
+			anime.Status = status.String
+		}
+		if releaseDate.Valid {
+			anime.ReleaseDate = releaseDate.Time
+		}
+		if rating.Valid {
+			anime.Rating = rating.String
+		}
+		if score.Valid {
+			anime.Score = float32(score.Float64)
+		}
+		if broadcastInformation.Valid {
+			anime.BroadcastInformation = broadcastInformation.String
 		}
 
-		if err := json.Unmarshal(studios, &anime.Studios); err != nil {
+		if err := json.Unmarshal(genresBytes, &anime.Genres); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(studiosBytes, &anime.Studios); err != nil {
 			return nil, err
 		}
 

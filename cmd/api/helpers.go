@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/Syha-01/animeVerseAPI/internal/validator"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -98,4 +100,40 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	}
 
 	return id, nil
+}
+
+// getSingleQueryParameter reads a string value from the query string.
+// If the key doesn't exist, it returns the provided default value.
+func (app *application) getSingleQueryParameter(qs url.Values, key string, defaultValue string) string {
+	s := qs.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+	return s
+}
+
+// getMultipleQueryParameters reads a comma-separated list of strings from the query string.
+// If the key doesn't exist, it returns the provided default value.
+func (app *application) getMultipleQueryParameters(qs url.Values, key string, defaultValue []string) []string {
+	s := qs.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+	return strings.Split(s, ",")
+}
+
+// getSingleIntegerParameter reads an integer value from the query string.
+// If the key doesn't exist or is invalid, it adds an error to the validator and returns the default value.
+func (app *application) getSingleIntegerParameter(qs url.Values, key string, defaultValue int, v *validator.Validator) int {
+	s := qs.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return defaultValue
+	}
+	return i
 }
