@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Syha-01/animeVerseAPI/internal/validator"
@@ -195,14 +196,15 @@ func (m AnimeModel) DeleteAnime(id int64) error {
 }
 
 func (m AnimeModel) GetAllAnimes(title string, genres []string, filters Filters) ([]*Anime, Metadata, error) {
-	// Use a window function to get the total count.
-	query := `
+	// Use fmt.Sprintf to dynamically inject the sort column and direction.
+	// We also add a secondary sort on `id` to ensure a consistent ordering.
+	query := fmt.Sprintf(`
 		SELECT COUNT(*) OVER(), id, title, synopsis, cover_image_url, total_episodes, status, release_date, rating, score, genres, studios, broadcast_information, jikan_last_synced_at
 		FROM anime
 		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 		AND (genres @> $2 OR $2 = '[]')
-		ORDER BY id
-		LIMIT $3 OFFSET $4`
+		ORDER BY %s %s, id ASC
+		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -218,6 +220,7 @@ func (m AnimeModel) GetAllAnimes(title string, genres []string, filters Filters)
 	}
 	defer rows.Close()
 
+	// The rest of the scanning logic remains the same.
 	totalRecords := 0
 	animes := []*Anime{}
 
@@ -292,7 +295,6 @@ func (m AnimeModel) GetAllAnimes(title string, genres []string, filters Filters)
 		return nil, Metadata{}, err
 	}
 
-	// Calculate metadata.
 	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
 
 	return animes, metadata, nil

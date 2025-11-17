@@ -13,12 +13,12 @@ func New() *Validator {
 	}
 }
 
-// Let's check to see if the Validator's map contains any entries
+// IsEmpty checks to see if the Validator's map contains any entries
 func (v *Validator) IsEmpty() bool {
 	return len(v.Errors) == 0
 }
 
-// Add a new error entry to the Validator's error map
+// AddError adds a new error entry to the Validator's error map
 // Check first if an entry with the same key does not already exist
 func (v *Validator) AddError(key string, message string) {
 	_, exists := v.Errors[key]
@@ -27,10 +27,19 @@ func (v *Validator) AddError(key string, message string) {
 	}
 }
 
-// If any validation check returns false, then we will
-// make an entry into our Validator's error map
-func (v *Validator) Check(acceptable bool, key string, message string) {
-	if !acceptable {
+// Check adds an error to the map only if a validation check is not 'ok'.
+func (v *Validator) Check(ok bool, key string, message string) {
+	if !ok {
 		v.AddError(key, message)
 	}
+}
+
+// PermittedValue checks if a string value is in a list of permitted values.
+func PermittedValue(value string, permittedValues ...string) bool {
+	for i := range permittedValues {
+		if value == permittedValues[i] {
+			return true
+		}
+	}
+	return false
 }

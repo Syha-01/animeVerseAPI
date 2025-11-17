@@ -1,12 +1,17 @@
 package data
 
 import (
+	"strings"
+
 	"github.com/Syha-01/animeVerseAPI/internal/validator"
 )
 
+// The Filters struct contains fields for pagination and sorting.
 type Filters struct {
-	Page     int // which page number the client wants
-	PageSize int // how many records per page
+	Page         int
+	PageSize     int
+	Sort         string
+	SortSafeList []string // A list of allowed sort fields
 }
 
 // Metadata struct holds pagination metadata.
@@ -18,12 +23,34 @@ type Metadata struct {
 	TotalRecords int `json:"total_records,omitempty"`
 }
 
-// ValidateFilters checks the page and page_size parameters.
+// ValidateFilters checks the page, page_size, and sort parameters.
 func ValidateFilters(v *validator.Validator, f Filters) {
 	v.Check(f.Page > 0, "page", "must be greater than zero")
-	v.Check(f.Page <= 1000, "page", "must be a maximum of 1000") // Adjusted for larger potential datasets
+	v.Check(f.Page <= 1000, "page", "must be a maximum of 1000")
 	v.Check(f.PageSize > 0, "page_size", "must be greater than zero")
 	v.Check(f.PageSize <= 100, "page_size", "must be a maximum of 100")
+
+	// Check if the sort field is a valid value from the safelist.
+	v.Check(validator.PermittedValue(f.Sort, f.SortSafeList...), "sort", "invalid sort value")
+}
+
+// sortColumn checks the client-provided sort field against the safelist
+// and returns the column name. It panics if the value is unsafe to prevent SQL injection.
+func (f Filters) sortColumn() string {
+	for _, safeValue := range f.SortSafeList {
+		if f.Sort == safeValue {
+			return strings.TrimPrefix(f.Sort, "-")
+		}
+	}
+	panic("unsafe sort parameter: " + f.Sort)
+}
+
+// sortDirection returns the sort direction ("ASC" or "DESC") based on the "-" prefix.
+func (f Filters) sortDirection() string {
+	if strings.HasPrefix(f.Sort, "-") {
+		return "DESC"
+	}
+	return "ASC"
 }
 
 // limit calculates how many records to send back.
