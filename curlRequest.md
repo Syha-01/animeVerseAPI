@@ -181,3 +181,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"title": "Test Anime", "to
 
 test for invalid score
 curl -X POST -H "Content-Type: application/json" -d '{"title": "Test Anime", "score": 11}' localhost:4000/v1/animes
+
+//-------------------------------- Rate limiting -------------------------------------------//
+
+for i in {1..8}; do curl -i localhost:4000/v1/healthcheck; echo ""; done
