@@ -185,3 +185,77 @@ curl -X POST -H "Content-Type: application/json" -d '{"title": "Test Anime", "sc
 //-------------------------------- Rate limiting -------------------------------------------//
 
 for i in {1..8}; do curl -i localhost:4000/v1/healthcheck; echo ""; done
+
+run with disabled rate limiting
+go run ./cmd/api -port=4000 -env=development -limiter-enabled=false -db-dsn="postgres://animeverse:verse1@localhost/animeverse?sslmode=disable"
+
+
+//-------------------------------- User Anime List -------------------------------------------//
+
+// 1. Create Entry
+// Replace "..." with a valid user_id from your database (e.g., retrieved via psql)
+BODY='{
+    "user_id": "f86f401b-57ec-4712-adbb-aefe02a717cf",
+    "anime_id": 1,
+    "status": "Watching",
+    "current_episode": 1,
+    "score": 8,
+    "started_watching_date": "2023-01-01"
+}'
+
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/user_anime_list
+
+// 2. Get Entry
+// Replace ":id" with the UUID of the created entry, the UUID will be given by the response when creating an anime
+curl -i localhost:4000/v1/user_anime_list/:id
+
+// 3. Update Entry
+// Replace ":id" with the UUID of the entry you want to update
+BODY='{
+    "status": "Completed",
+    "score": 9,
+    "current_episode": 12,
+    "finished_watching_date": "2023-01-05"
+}'
+
+curl -i -X PATCH -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/user_anime_list/ff401b-57ec-4712-adbb-aefe02a717cf
+
+// 4. List Entries for user
+// Filter by user_id and/or status. Pagination and sorting are also supported.
+curl -i "localhost:4000/v1/user_anime_list?user_id=f86f401b-57ec-4712-adbb-aefe02a717cf&status=Completed"
+
+// 5. Delete Entry
+// Replace ":id" with the UUID of the entry you want to delete
+curl -i -X DELETE localhost:4000/v1/user_anime_list/:id
+
+
+// 6. Sorting
+// Sort by score (descending)
+curl -i "localhost:4000/v1/user_anime_list?user_id=...&sort=-score"
+
+// Sort by most recently updated
+curl -i "localhost:4000/v1/user_anime_list?user_id=...&sort=-created_at"
+
+// 7. Pagination
+// Get the second page of results, with 5 items per page
+curl -i "localhost:4000/v1/user_anime_list?user_id=...&page=2&page_size=5"
+
+// 8. Error Handling Examples
+
+// Invalid Status
+BODY='{
+    "user_id": "...",
+    "anime_id": 1,
+    "status": "InvalidStatus",
+    "current_episode": 1
+}'
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/user_anime_list
+
+// Score out of range (must be 1-10)
+BODY='{
+    "user_id": "...",
+    "anime_id": 1,
+    "status": "Watching",
+    "score": 11
+}'
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/user_anime_list

@@ -102,6 +102,17 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
+func (app *application) readUUIDParam(r *http.Request) (string, error) {
+	params := httprouter.ParamsFromContext(r.Context())
+
+	id := params.ByName("id")
+	if id == "" {
+		return "", errors.New("invalid id parameter")
+	}
+
+	return id, nil
+}
+
 // getSingleQueryParameter reads a string value from the query string.
 // If the key doesn't exist, it returns the provided default value.
 func (app *application) getSingleQueryParameter(qs url.Values, key string, defaultValue string) string {

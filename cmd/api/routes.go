@@ -23,5 +23,12 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/animes/:id", app.displayAnimeHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/animes/:id", app.updateAnimeHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/animes/:id", app.deleteAnimeHandler)
+
+	router.HandlerFunc(http.MethodGet, "/v1/user_anime_list", app.listUserAnimeListsHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/user_anime_list", app.createUserAnimeListHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/user_anime_list/:id", app.displayUserAnimeListHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/user_anime_list/:id", app.updateUserAnimeListHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/user_anime_list/:id", app.deleteUserAnimeListHandler)
+
 	return app.recoverPanic(app.rateLimit(router))
 }
