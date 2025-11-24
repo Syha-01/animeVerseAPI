@@ -289,4 +289,12 @@ BODY_INVALID='{
 curl -i -X POST -H "Content-Type: application/json" -d "$BODY_INVALID" localhost:4000/v1/users
 
 
+// 4. Activate User
+// Replace "..." with the token received in the email
+BODY_ACTIVATE='{
+    "token": "..."
+}'
+curl -i -X PUT -H "Content-Type: application/json" -d "$BODY_ACTIVATE" localhost:4000/v1/users/activated
+
+
 
