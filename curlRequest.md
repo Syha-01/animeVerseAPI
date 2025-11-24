@@ -259,3 +259,34 @@ BODY='{
     "score": 11
 }'
 curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/user_anime_list
+
+//-------------------------------- Rate Limiting -------------------------------------------//
+
+
+for i in {1..8}; do curl -i localhost:4000/v1/healthcheck; echo ""; done
+
+
+//-------------------------------- Creating Users -------------------------------------------//
+
+// 1. Successful Registration
+BODY='{
+    "username": "Test User",
+    "email": "test@example.com",
+    "password": "password123"
+}'
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/users
+
+// 2. Duplicate Email Test
+// Run the same command again to verify duplicate email handling
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/users
+
+// 3. Validation Error Test (Invalid Data)
+BODY_INVALID='{
+    "username": "",
+    "email": "invalid-email",
+    "password": "short"
+}'
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY_INVALID" localhost:4000/v1/users
+
+
+

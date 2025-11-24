@@ -29,3 +29,17 @@ db/migrations/new:
 db/migrations/up:
 	@echo 'Running up migrations...'
 	migrate -path ./migrations -database ${ANIMEVERSE_DB_DSN} up
+
+## db/migrations/down: apply all down database migrations
+.PHONY: db/migrations/down
+db/migrations/down:
+	@echo 'Running down migrations...'
+	migrate -path ./migrations -database ${ANIMEVERSE_DB_DSN} down
+
+## db/migrations/force version=$1: force database migration version
+.PHONY: db/migrations/force
+db/migrations/force:
+	@echo 'Forcing migration version to ${version}...'
+	migrate -path ./migrations -database ${ANIMEVERSE_DB_DSN} force ${version}
+
+
