@@ -1,12 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/Syha-01/animeVerseAPI/internal/data"
+	"github.com/Syha-01/animeVerseAPI/internal/validator"
 	"golang.org/x/time/rate"
 )
 
@@ -105,6 +109,50 @@ func (a *application) enableCORS(next http.Handler) http.Handler {
 				}
 			}
 		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (a *application) authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "Authorization")
+
+		authorizationHeader := r.Header.Get("Authorization")
+
+		if authorizationHeader == "" {
+			r = a.contextSetUser(r, data.AnonymousUser)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		headerParts := strings.Split(authorizationHeader, " ")
+		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+			a.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+		token := headerParts[1]
+
+		v := validator.New()
+
+		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
+			a.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+		user, err := a.models.Users.GetForToken(data.ScopeAuthentication, token)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				a.invalidAuthenticationTokenResponse(w, r)
+			default:
+				a.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+
+		r = a.contextSetUser(r, user)
 
 		next.ServeHTTP(w, r)
 	})

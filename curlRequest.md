@@ -297,4 +297,56 @@ BODY_ACTIVATE='{
 curl -i -X PUT -H "Content-Type: application/json" -d "$BODY_ACTIVATE" localhost:4000/v1/users/activated
 
 
+//-------------------------------- Token Types Explanation -------------------------------------------//
+// There are two different types of tokens used in this API:
+//
+// 1. Activation Token (Email Token)
+//    - Purpose: Verify your email address.
+//    - Source: Sent to your email inbox after registration.
+//    - Usage: Sent ONCE to `PUT /v1/users/activated`.
+//    - Result: Your account status changes to "activated". It does NOT log you in.
+//
+// 2. Authentication Token (Bearer Token)
+//    - Purpose: Prove your identity for API requests (Login).
+//    - Source: Returned by `POST /v1/tokens/authentication` in exchange for email/password.
+//    - Usage: Sent in the `Authorization` header for EVERY protected request.
+//    - Result: The API knows who you are (User vs Anonymous).
+
+//-------------------------------- Authentication & Anonymous Users -------------------------------------------//
+
+// 1. Authenticate (Login)
+// Exchange your credentials for a Bearer token.
+// The token is valid for 24 hours.
+BODY_LOGIN='{
+    "email": "test@example.com",
+    "password": "password123"
+}'
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY_LOGIN" localhost:4000/v1/tokens/authentication
+
+// Response will contain the token:
+// {
+//     "authentication_token": {
+//         "token": "YOUR_TOKEN_HERE",
+//         "expiry": "..."
+//     }
+// }
+
+
+// 2. Authenticated Request
+// Use the token from the previous step in the Authorization header.
+// Replace "YOUR_TOKEN_HERE" with the actual token.
+curl -i -H "Authorization: Bearer YOUR_TOKEN_HERE" localhost:4000/v1/healthcheck
+
+
+// 3. Anonymous Request
+// If you do not provide an Authorization header, the API treats you as an Anonymous User.
+// Currently, this allows access to public endpoints like healthcheck.
+curl -i localhost:4000/v1/healthcheck
+
+
+// 4. Invalid Token
+// If you provide an invalid or expired token, you will receive a 401 Unauthorized error.
+curl -i -H "Authorization: Bearer invalid_token" localhost:4000/v1/healthcheck
+
+
 
