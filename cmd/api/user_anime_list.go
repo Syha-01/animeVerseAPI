@@ -19,6 +19,20 @@ func (a *application) createUserAnimeListHandler(w http.ResponseWriter, r *http.
 		Score                int32  `json:"score"`
 		StartedWatchingDate  string `json:"started_watching_date"`
 		FinishedWatchingDate string `json:"finished_watching_date"`
+		// Anime details for smart caching
+		Anime *struct {
+			Title                string   `json:"title"`
+			Synopsis             string   `json:"synopsis"`
+			CoverImageURL        string   `json:"cover_image_url"`
+			TotalEpisodes        int32    `json:"total_episodes"`
+			Status               string   `json:"status"`
+			ReleaseDate          string   `json:"release_date"`
+			Rating               string   `json:"rating"`
+			Score                float32  `json:"score"`
+			Genres               []string `json:"genres"`
+			Studios              []string `json:"studios"`
+			BroadcastInformation string   `json:"broadcast_information"`
+		} `json:"anime"`
 	}
 
 	err := a.readJSON(w, r, &input)
@@ -27,6 +41,57 @@ func (a *application) createUserAnimeListHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// 1. Check if Anime exists, if not and details provided, create it.
+	_, err = a.models.Animes.GetAnime(input.AnimeID)
+	if err != nil {
+		if errors.Is(err, data.ErrRecordNotFound) {
+			// Anime not found. If details are provided, try to create it.
+			if input.Anime != nil {
+				anime := &data.Anime{
+					ID:                   input.AnimeID,
+					Title:                input.Anime.Title,
+					Synopsis:             input.Anime.Synopsis,
+					CoverImageURL:        input.Anime.CoverImageURL,
+					TotalEpisodes:        input.Anime.TotalEpisodes,
+					Status:               input.Anime.Status,
+					Rating:               input.Anime.Rating,
+					Score:                input.Anime.Score,
+					Genres:               input.Anime.Genres,
+					Studios:              input.Anime.Studios,
+					BroadcastInformation: input.Anime.BroadcastInformation,
+				}
+
+				if input.Anime.ReleaseDate != "" {
+					releaseDate, err := time.Parse("2006-01-02", input.Anime.ReleaseDate)
+					if err == nil {
+						anime.ReleaseDate = releaseDate
+					}
+				}
+
+				v := validator.New()
+				if data.ValidateAnime(v, anime); !v.IsEmpty() {
+					a.failedValidationResponse(w, r, v.Errors)
+					return
+				}
+
+				err = a.models.Animes.InsertAnime(anime)
+				if err != nil {
+					a.serverErrorResponse(w, r, err)
+					return
+				}
+			} else {
+				// Anime not found and no details provided
+				a.notFoundResponse(w, r)
+				return
+			}
+		} else {
+			// Other error checking anime existence
+			a.serverErrorResponse(w, r, err)
+			return
+		}
+	}
+
+	// 2. Proceed to create the list entry
 	list := &data.UserAnimeList{
 		UserID:         input.UserID,
 		AnimeID:        input.AnimeID,

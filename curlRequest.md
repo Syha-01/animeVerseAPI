@@ -192,7 +192,7 @@ go run ./cmd/api -port=4000 -env=development -limiter-enabled=false -db-dsn="pos
 
 //-------------------------------- User Anime List -------------------------------------------//
 
-// 1. Create Entry
+// 1. Create Entry (Standard)
 // Replace "..." with a valid user_id from your database (e.g., retrieved via psql)
 BODY='{
     "user_id": "f86f401b-57ec-4712-adbb-aefe02a717cf",
@@ -204,6 +204,32 @@ BODY='{
 }'
 
 curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1/user_anime_list
+
+
+// 1b. Create Entry with Smart Caching (Add New Anime)
+// If the anime does not exist in the database, you can provide its details to create it on the fly.
+BODY_SMART='{
+    "user_id": "f86f401b-57ec-4712-adbb-aefe02a717cf",
+    "anime_id": 99999,
+    "status": "Watching",
+    "current_episode": 1,
+    "score": 8,
+    "anime": {
+        "title": "New Anime from Jikan",
+        "synopsis": "This anime was fetched from Jikan and cached automatically.",
+        "cover_image_url": "https://example.com/image.jpg",
+        "total_episodes": 12,
+        "status": "Airing",
+        "release_date": "2023-10-01",
+        "rating": "PG-13",
+        "score": 7.5,
+        "genres": ["Action", "Sci-Fi"],
+        "studios": ["New Studio"],
+        "broadcast_information": "Fridays"
+    }
+}'
+
+curl -i -X POST -H "Content-Type: application/json" -d "$BODY_SMART" localhost:4000/v1/user_anime_list
 
 // 2. Get Entry
 // Replace ":id" with the UUID of the created entry, the UUID will be given by the response when creating an anime
