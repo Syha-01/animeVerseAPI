@@ -18,17 +18,17 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 
-	router.HandlerFunc(http.MethodGet, "/v1/animes", app.listAnimesHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/animes", app.createAnimeHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/animes/:id", app.displayAnimeHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/animes/:id", app.updateAnimeHandler)
-	router.HandlerFunc(http.MethodDelete, "/v1/animes/:id", app.deleteAnimeHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/animes", app.requirePermission("animes:read", app.listAnimesHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/animes", app.requirePermission("animes:write", app.createAnimeHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/animes/:id", app.requirePermission("animes:read", app.displayAnimeHandler))
+	router.HandlerFunc(http.MethodPatch, "/v1/animes/:id", app.requirePermission("animes:write", app.updateAnimeHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/animes/:id", app.requirePermission("animes:write", app.deleteAnimeHandler))
 
-	router.HandlerFunc(http.MethodGet, "/v1/user_anime_list", app.listUserAnimeListsHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/user_anime_list", app.createUserAnimeListHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/user_anime_list/:id", app.displayUserAnimeListHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/user_anime_list/:id", app.updateUserAnimeListHandler)
-	router.HandlerFunc(http.MethodDelete, "/v1/user_anime_list/:id", app.deleteUserAnimeListHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/user_anime_list", app.requireActivatedUser(app.listUserAnimeListsHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/user_anime_list", app.requireActivatedUser(app.createUserAnimeListHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/user_anime_list/:id", app.requireActivatedUser(app.displayUserAnimeListHandler))
+	router.HandlerFunc(http.MethodPatch, "/v1/user_anime_list/:id", app.requireActivatedUser(app.updateUserAnimeListHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/user_anime_list/:id", app.requireActivatedUser(app.deleteUserAnimeListHandler))
 
 	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler)
