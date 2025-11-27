@@ -11,7 +11,7 @@ run/api:
 		-limiter-rps=2 \
 		-limiter-enabled=true \
 		-db-dsn=${ANIMEVERSE_DB_DSN} \
-		-cors-trusted-origins="http://localhost:9000 http://localhost:9001"
+		-cors-trusted-origins="http://localhost:8081 http://localhost:9000 http://localhost:9001"
 
 ## db/psql: connect to the database using psql (terminal)
 .PHONY: db/psql

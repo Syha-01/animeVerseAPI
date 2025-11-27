@@ -363,6 +363,9 @@ curl -i -X POST -H "Content-Type: application/json" -d "$BODY_LOGIN" localhost:4
 // Replace "YOUR_TOKEN_HERE" with the actual token.
 curl -i -H "Authorization: Bearer YOUR_TOKEN_HERE" localhost:4000/v1/healthcheck
 
+// Get Current User Profile
+curl -i -H "Authorization: Bearer YOUR_TOKEN_HERE" localhost:4000/v1/users/me
+
 
 // 3. Anonymous Request
 // If you do not provide an Authorization header, the API treats you as an Anonymous User.
@@ -376,3 +379,17 @@ curl -i -H "Authorization: Bearer invalid_token" localhost:4000/v1/healthcheck
 
 
 
+
+
+//--force db migration--//
+
+migrate -path ./migrations -database "postgres://animeverse:verse1@localhost/animeverse?sslmode=disable" force 7
+
+
+//-------------------------------- Verified Test Run (Syha) -------------------------------------------//
+
+// 1. Activate Account (Token: LY77HSSIL2IE7JRSSKUHWYXY7U)
+curl -i -X PUT -H "Content-Type: application/json" -d '{"token": "LY77HSSIL2IE7JRSSKUHWYXY7U"}' localhost:4000/v1/users/activated
+
+// 2. Authenticate/Login (john@gmail.com)
+curl -i -X POST -H "Content-Type: application/json" -d '{"email": "john@gmail.com", "password": "mypassword1234"}' localhost:4000/v1/tokens/authentication

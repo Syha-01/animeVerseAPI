@@ -65,6 +65,7 @@ func (a *application) registerUserHandler(w http.ResponseWriter, r *http.Request
 		a.serverErrorResponse(w, r, err)
 		return
 	}
+	a.logger.Info("Activation Token", "token", token.Plaintext)
 
 	// Send the welcome email
 	a.background(func() {
@@ -136,6 +137,15 @@ func (a *application) activateUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	err = a.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+	}
+}
+
+func (a *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
+	user := a.contextGetUser(r)
+
+	err := a.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 	}

@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -21,6 +22,7 @@ type UserAnimeList struct {
 	FinishedWatchingDate time.Time `json:"finished_watching_date,omitempty"`
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
+	Anime                *Anime    `json:"anime"`
 }
 
 func ValidateUserAnimeList(v *validator.Validator, list *UserAnimeList) {
@@ -44,12 +46,19 @@ func (m UserAnimeListModel) InsertUserAnimeList(list *UserAnimeList) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at`
 
+	var score any
+	if list.Score != 0 {
+		score = list.Score
+	} else {
+		score = nil
+	}
+
 	args := []any{
 		list.UserID,
 		list.AnimeID,
 		list.Status,
 		list.CurrentEpisode,
-		list.Score,
+		score,
 		list.StartedWatchingDate,
 		list.FinishedWatchingDate,
 	}
@@ -115,10 +124,17 @@ func (m UserAnimeListModel) UpdateUserAnimeList(list *UserAnimeList) error {
 		WHERE id = $6
 		RETURNING updated_at`
 
+	var score any
+	if list.Score != 0 {
+		score = list.Score
+	} else {
+		score = nil
+	}
+
 	args := []any{
 		list.Status,
 		list.CurrentEpisode,
-		list.Score,
+		score,
 		list.StartedWatchingDate,
 		list.FinishedWatchingDate,
 		list.ID,
@@ -156,13 +172,21 @@ func (m UserAnimeListModel) DeleteUserAnimeList(id string) error {
 }
 
 func (m UserAnimeListModel) GetAllUserAnimeLists(userID string, status string, filters Filters) ([]*UserAnimeList, Metadata, error) {
+	sortCol := filters.sortColumn()
+	if sortCol == "id" {
+		sortCol = "ual.id"
+	}
+
 	query := fmt.Sprintf(`
-		SELECT COUNT(*) OVER(), id, user_id, anime_id, status, current_episode, score, started_watching_date, finished_watching_date, created_at, updated_at
-		FROM user_anime_list
-		WHERE (user_id::text = $1 OR $1 = '')
-		AND (status::text = $2 OR $2 = '')
-		ORDER BY %s %s, id ASC
-		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
+		SELECT COUNT(*) OVER(), 
+			ual.id, ual.user_id, ual.anime_id, ual.status, ual.current_episode, ual.score, ual.started_watching_date, ual.finished_watching_date, ual.created_at, ual.updated_at,
+			a.id, a.title, a.synopsis, a.cover_image_url, a.total_episodes, a.status, a.release_date, a.rating, a.score, a.genres, a.studios, a.broadcast_information, a.jikan_last_synced_at
+		FROM user_anime_list ual
+		INNER JOIN anime a ON ual.anime_id = a.id
+		WHERE (ual.user_id::text = $1 OR $1 = '')
+		AND (ual.status::text = $2 OR $2 = '')
+		ORDER BY %s %s, ual.id ASC
+		LIMIT $3 OFFSET $4`, sortCol, filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -183,6 +207,18 @@ func (m UserAnimeListModel) GetAllUserAnimeLists(userID string, status string, f
 		var score sql.NullInt32
 		var startedWatchingDate, finishedWatchingDate sql.NullTime
 
+		// Anime fields
+		list.Anime = &Anime{}
+		var animeSynopsis sql.NullString
+		var animeCoverImageURL sql.NullString
+		var animeTotalEpisodes sql.NullInt32
+		var animeStatus sql.NullString
+		var animeReleaseDate sql.NullTime
+		var animeRating sql.NullString
+		var animeScore sql.NullFloat64
+		var animeBroadcastInformation sql.NullString
+		var animeGenresBytes, animeStudiosBytes []byte
+
 		err := rows.Scan(
 			&totalRecords,
 			&list.ID,
@@ -195,6 +231,20 @@ func (m UserAnimeListModel) GetAllUserAnimeLists(userID string, status string, f
 			&finishedWatchingDate,
 			&list.CreatedAt,
 			&list.UpdatedAt,
+			// Anime fields scan
+			&list.Anime.ID,
+			&list.Anime.Title,
+			&animeSynopsis,
+			&animeCoverImageURL,
+			&animeTotalEpisodes,
+			&animeStatus,
+			&animeReleaseDate,
+			&animeRating,
+			&animeScore,
+			&animeGenresBytes,
+			&animeStudiosBytes,
+			&animeBroadcastInformation,
+			&list.Anime.JikanLastSyncedAt,
 		)
 		if err != nil {
 			return nil, Metadata{}, err
@@ -208,6 +258,38 @@ func (m UserAnimeListModel) GetAllUserAnimeLists(userID string, status string, f
 		}
 		if finishedWatchingDate.Valid {
 			list.FinishedWatchingDate = finishedWatchingDate.Time
+		}
+
+		// Populate Anime fields
+		if animeSynopsis.Valid {
+			list.Anime.Synopsis = animeSynopsis.String
+		}
+		if animeCoverImageURL.Valid {
+			list.Anime.CoverImageURL = animeCoverImageURL.String
+		}
+		if animeTotalEpisodes.Valid {
+			list.Anime.TotalEpisodes = animeTotalEpisodes.Int32
+		}
+		if animeStatus.Valid {
+			list.Anime.Status = animeStatus.String
+		}
+		if animeReleaseDate.Valid {
+			list.Anime.ReleaseDate = animeReleaseDate.Time
+		}
+		if animeRating.Valid {
+			list.Anime.Rating = animeRating.String
+		}
+		if animeScore.Valid {
+			list.Anime.Score = float32(animeScore.Float64)
+		}
+		if animeBroadcastInformation.Valid {
+			list.Anime.BroadcastInformation = animeBroadcastInformation.String
+		}
+		if err := json.Unmarshal(animeGenresBytes, &list.Anime.Genres); err != nil {
+			return nil, Metadata{}, err
+		}
+		if err := json.Unmarshal(animeStudiosBytes, &list.Anime.Studios); err != nil {
+			return nil, Metadata{}, err
 		}
 
 		lists = append(lists, &list)
