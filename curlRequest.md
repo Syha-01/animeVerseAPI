@@ -396,4 +396,4 @@ curl -i -X POST -H "Content-Type: application/json" -d '{"email": "john@gmail.co
 
 curl -X PUT http://localhost:4000/v1/users/activated \
   -H "Content-Type: application/json" \
-  -d '{"token": "QDSSVC3LH5EPHVUHLNIALKH5ZI"}'
+  -d '{"token": "LMEBSMPKGIKLOUIKV7MEYGFO6Q"}'
