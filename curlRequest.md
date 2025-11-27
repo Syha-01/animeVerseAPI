@@ -193,7 +193,7 @@ go run ./cmd/api -port=4000 -env=development -limiter-enabled=false -db-dsn="pos
 //-------------------------------- User Anime List -------------------------------------------//
 
 // 1. Create Entry (Standard)
-// Replace "..." with a valid user_id from your database (e.g., retrieved via psql)
+// Uses the user_id "f86f401b-57ec-4712-adbb-aefe02a717cf" as an example
 BODY='{
     "user_id": "f86f401b-57ec-4712-adbb-aefe02a717cf",
     "anime_id": 1,
@@ -257,20 +257,20 @@ curl -i -X DELETE localhost:4000/v1/user_anime_list/:id
 
 // 6. Sorting
 // Sort by score (descending)
-curl -i "localhost:4000/v1/user_anime_list?user_id=...&sort=-score"
+curl -i "localhost:4000/v1/user_anime_list?user_id=f86f401b-57ec-4712-adbb-aefe02a717cf&sort=-score"
 
 // Sort by most recently updated
-curl -i "localhost:4000/v1/user_anime_list?user_id=...&sort=-created_at"
+curl -i "localhost:4000/v1/user_anime_list?user_id=f86f401b-57ec-4712-adbb-aefe02a717cf&sort=-created_at"
 
 // 7. Pagination
 // Get the second page of results, with 5 items per page
-curl -i "localhost:4000/v1/user_anime_list?user_id=...&page=2&page_size=5"
+curl -i "localhost:4000/v1/user_anime_list?user_id=f86f401b-57ec-4712-adbb-aefe02a717cf&page=2&page_size=5"
 
 // 8. Error Handling Examples
 
 // Invalid Status
 BODY='{
-    "user_id": "...",
+    "user_id": "f86f401b-57ec-4712-adbb-aefe02a717cf",
     "anime_id": 1,
     "status": "InvalidStatus",
     "current_episode": 1
@@ -279,7 +279,7 @@ curl -i -X POST -H "Content-Type: application/json" -d "$BODY" localhost:4000/v1
 
 // Score out of range (must be 1-10)
 BODY='{
-    "user_id": "...",
+    "user_id": "f86f401b-57ec-4712-adbb-aefe02a717cf",
     "anime_id": 1,
     "status": "Watching",
     "score": 11
@@ -316,9 +316,9 @@ curl -i -X POST -H "Content-Type: application/json" -d "$BODY_INVALID" localhost
 
 
 // 4. Activate User
-// Replace "..." with the token received in the email
+// Replace "35GDX654ZCHMPJQR5PNDV3UJIE" with the token received in the email
 BODY_ACTIVATE='{
-    "token": "..."
+    "token": "35GDX654ZCHMPJQR5PNDV3UJIE"
 }'
 curl -i -X PUT -H "Content-Type: application/json" -d "$BODY_ACTIVATE" localhost:4000/v1/users/activated
 
@@ -352,19 +352,19 @@ curl -i -X POST -H "Content-Type: application/json" -d "$BODY_LOGIN" localhost:4
 // Response will contain the token:
 // {
 //     "authentication_token": {
-//         "token": "YOUR_TOKEN_HERE",
-//         "expiry": "..."
+//         "token": "OP35GDX654ZCHMPJQR5PNDV3UJIE",
+//         "expiry": "2025-11-27T10:00:00Z"
 //     }
 // }
 
 
 // 2. Authenticated Request
 // Use the token from the previous step in the Authorization header.
-// Replace "YOUR_TOKEN_HERE" with the actual token.
-curl -i -H "Authorization: Bearer YOUR_TOKEN_HERE" localhost:4000/v1/healthcheck
+// Replace "OP35GDX654ZCHMPJQR5PNDV3UJIE" with the actual token.
+curl -i -H "Authorization: Bearer OP35GDX654ZCHMPJQR5PNDV3UJIE" localhost:4000/v1/healthcheck
 
 // Get Current User Profile
-curl -i -H "Authorization: Bearer YOUR_TOKEN_HERE" localhost:4000/v1/users/me
+curl -i -H "Authorization: Bearer OP35GDX654ZCHMPJQR5PNDV3UJIE" localhost:4000/v1/users/me
 
 
 // 3. Anonymous Request
@@ -393,3 +393,7 @@ curl -i -X PUT -H "Content-Type: application/json" -d '{"token": "LY77HSSIL2IE7J
 
 // 2. Authenticate/Login (john@gmail.com)
 curl -i -X POST -H "Content-Type: application/json" -d '{"email": "john@gmail.com", "password": "mypassword1234"}' localhost:4000/v1/tokens/authentication
+
+curl -X PUT http://localhost:4000/v1/users/activated \
+  -H "Content-Type: application/json" \
+  -d '{"token": "QDSSVC3LH5EPHVUHLNIALKH5ZI"}'

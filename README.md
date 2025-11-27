@@ -2,6 +2,9 @@
 
 A production-ready RESTful Web API built with Go, serving as the backend for the AnimeVerse mobile application. This project demonstrates a structured Go application with authentication, database interactions, and third-party API integration.
 
+This is a general setup for the AnimeVerse API. 
+For a more comprehensive documentation you can visit the [AnimeVerse API Documentation](https://anime-verse-api-documentation.vercel.app/docs).
+
 ## Features
 
 *   **Synchronous REST API**: Full CRUD operations for managing user anime lists and viewing anime details.
