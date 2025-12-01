@@ -42,4 +42,30 @@ db/migrations/force:
 	@echo 'Forcing migration version to ${version}...'
 	migrate -path ./migrations -database ${ANIMEVERSE_DB_DSN} force ${version}
 
+## test: run all tests
+.PHONY: test
+test:
+	@echo 'Running tests...'
+	@go test ./...
+
+## test/verbose: run all tests with verbose output
+.PHONY: test/verbose
+test/verbose:
+	@echo 'Running tests (verbose)...'
+	@go test -v ./...
+
+## test/coverage: run all tests with coverage
+.PHONY: test/coverage
+test/coverage:
+	@echo 'Running tests with coverage...'
+	@go test -cover ./...
+
+## test/coverage-report: generate HTML coverage report
+.PHONY: test/coverage-report
+test/coverage-report:
+	@echo 'Generating coverage report...'
+	@go test -coverprofile=coverage.out ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo 'Coverage report generated: coverage.html'
+
 
